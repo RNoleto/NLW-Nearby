@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { View, Text, Alert, Modal } from "react-native";
+import { View, StatusBar, Alert, Modal, ScrollView } from "react-native";
 import { router, useLocalSearchParams, Redirect } from "expo-router";
 import { useCameraPermissions, CameraView } from "expo-camera";
 
@@ -28,6 +28,7 @@ export default function Market(){
     const params = useLocalSearchParams<{ id: string }>()
 
     const qrlock = useRef(false)
+    console.log(params.id)
 
     async function fetchMarket(){
         try {
@@ -53,6 +54,7 @@ export default function Market(){
           if(!granted){
             return Alert.alert("Câmera", "Você precisa habilitar o uso da câmera")
           }
+            qrlock.current = false
             setIsVisibleCameraModal(true)
         } catch (error) {
             console.log(error)
@@ -79,12 +81,17 @@ export default function Market(){
     function handleUseCoupon(id:string){
         setIsVisibleCameraModal(false)
 
-        Alert.alert("Cupom", "Não é possívle reutilizar um cupom resgatado.")
+        Alert.alert("Cupom", "Não é possível reutilizar um cupom resgatado. Deseja realmente resgatar o cupon?", 
+            [
+                { style: "cancel", text: "Não"},
+                { text: "Sim", onPress: () => getCoupon(id) }
+            ]
+        )
     }
 
     useEffect(() => {
         fetchMarket()
-    },[params.id])
+    },[params.id, coupon])
 
     if(isloading){
         return<Loading/>
@@ -96,9 +103,12 @@ export default function Market(){
 
     return(
         <View style={{flex:1}}>
+            <StatusBar barStyle="light-content" hidden={isVisibleCameraModal} />
+            <ScrollView showsVerticalScrollIndicator={false}>
             <Cover uri={data.cover} />
             <Details data={data}/>
             {coupon && <Coupon code={coupon}/>}
+            </ScrollView>
             <View style={{padding: 32}}>
                 <Button onPress={handleOpenCamera}>
                     <Button.Title>Ler QR Code</Button.Title>
@@ -112,7 +122,7 @@ export default function Market(){
                     onBarcodeScanned={({data}) => {
                         if(data && !qrlock.current){
                             qrlock.current = true
-                            setTimeout(() => console.log(data), 500)
+                            setTimeout(() => handleUseCoupon(data), 500)
                         }
                     }}
                 />
